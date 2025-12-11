@@ -2,7 +2,7 @@
 require "../includes/auth.php";
 require "../config/db.php";
 
-// Only Admin or Secretary can auto-assign
+//only Admin can auto-assign
 if ($_SESSION["role"] !== "Admin" && $_SESSION["role"] !== "Secretary") {
     header("Location: ../login.php");
     exit;
@@ -10,7 +10,7 @@ if ($_SESSION["role"] !== "Admin" && $_SESSION["role"] !== "Secretary") {
 
 $classId = $_GET["class_id"];
 
-// Get the class blackout time
+//get the class blackout time
 $sql = "SELECT blackout_ID FROM Class WHERE class_ID = ?";
 $stmt = $conn->prepare($sql);
 $stmt->bind_param("i", $classId);
@@ -19,7 +19,7 @@ $class = $stmt->get_result()->fetch_assoc();
 
 $blackout = $class["blackout_ID"];
 
-// Get all classrooms that are NOT unavailable during this blackout
+//get all classrooms that are not unavailable during this blackout
 $sql = "
     SELECT room_ID
     FROM Classroom
@@ -34,7 +34,7 @@ $rooms = $conn->query($sql);
 $availableRooms = [];
 
 while ($room = $rooms->fetch_assoc()) {
-    // Check if room is already assigned at that time
+    //checking if room is already assigned at that time
     $roomId = $room["room_ID"];
 
     $sqlCheck = "
@@ -58,16 +58,16 @@ if (empty($availableRooms)) {
     exit;
 }
 
-// Pick the first available room
+// ppick the first available room
 $selectedRoom = $availableRooms[0];
 
-// Insert assignment
+// insert assignment
 $sqlAssign = "INSERT INTO Assignment (class_ID, room_ID, assigned_by) VALUES (?, ?, ?)";
 $stmtAssign = $conn->prepare($sqlAssign);
 $stmtAssign->bind_param("iii", $classId, $selectedRoom, $_SESSION["user_id"]);
 $stmtAssign->execute();
 
-// Redirect back to class list
+//redirect back to class list
 header("Location: classes_list.php");
 exit;
 ?>
