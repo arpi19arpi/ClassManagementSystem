@@ -2,7 +2,7 @@
 require "includes/auth.php";
 require "config/db.php";
 
-// Only allow logged-in students
+// only allow logged-in students
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== "Student") {
     header("Location: login.php");
     exit;
@@ -10,7 +10,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== "Student") {
 
 $studentId = $_SESSION['user_id'];
 
-// SQL: get all classes enrolled by this student
+//all classes enrolled by this student
 $sql = "
     SELECT 
         c.class_ID,
@@ -32,6 +32,7 @@ $sql = "
     LEFT JOIN Classroom cr ON a.room_ID = cr.room_ID
     LEFT JOIN Building bl ON cr.building_ID = bl.building_ID
     WHERE sc.student_ID = ?
+    ORDER BY c.date_slot, b.start_time
 ";
 
 $stmt = $conn->prepare($sql);
@@ -55,7 +56,7 @@ $result = $stmt->get_result();
             padding: 20px;
             border-radius: 12px;
             box-shadow: 0 3px 10px rgba(0,0,0,0.1);
-            max-width: 1000px;
+            max-width: 1100px;
             margin: 0 auto;
         }
 
@@ -64,13 +65,47 @@ $result = $stmt->get_result();
             border-collapse: collapse;
             margin-top: 15px;
         }
+
         th, td {
             padding: 12px;
             border-bottom: 1px solid #ddd;
         }
+
         th { background: #edf2ff; text-align: left; }
         tr:hover { background: #f8faff; }
+
         .back { color: #2b6cb0; text-decoration: none; font-size: 14px; }
+
+        .drop-btn {
+            background: #c62828;
+            color: white;
+            padding: 6px 10px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .drop-btn:hover {
+            background: #8e0000;
+        }
+
+        .msg-success {
+            padding: 12px;
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+
+        .msg-error {
+            padding: 12px;
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+
     </style>
 </head>
 
@@ -84,6 +119,16 @@ $result = $stmt->get_result();
     <a href="student_dashboard.php" class="back">&larr; Back to Dashboard</a>
 
     <div class="card">
+
+        <!-- Success / Error Messages -->
+        <?php if (isset($_GET['msg']) && !isset($_GET['error'])): ?>
+            <div class="msg-success"><?= htmlspecialchars($_GET['msg']) ?></div>
+        <?php endif; ?>
+
+        <?php if (isset($_GET['error'])): ?>
+            <div class="msg-error"><?= htmlspecialchars($_GET['msg']) ?></div>
+        <?php endif; ?>
+
         <h2>Enrolled Classes</h2>
 
         <table>
@@ -97,13 +142,14 @@ $result = $stmt->get_result();
                     <th>Time</th>
                     <th>Room</th>
                     <th>Building</th>
+                    <th>Drop</th>
                 </tr>
             </thead>
 
             <tbody>
                 <?php if ($result->num_rows === 0): ?>
                     <tr>
-                        <td colspan="8">You are not enrolled in any classes.</td>
+                        <td colspan="9">You are not enrolled in any classes.</td>
                     </tr>
                 <?php else: ?>
                     <?php while ($row = $result->fetch_assoc()): ?>
@@ -119,6 +165,12 @@ $result = $stmt->get_result();
                             </td>
                             <td><?= htmlspecialchars($row['room_No'] ?? 'TBA'); ?></td>
                             <td><?= htmlspecialchars($row['building_name'] ?? 'TBA'); ?></td>
+                            <td>
+                                <form method="post" action="classes/drop.php" onsubmit="return confirm('Are you sure you want to drop this class?');">
+                                    <input type="hidden" name="class_id" value="<?= $row['class_ID']; ?>">
+                                    <button class="drop-btn">Drop</button>
+                                </form>
+                            </td>
                         </tr>
                     <?php endwhile; ?>
                 <?php endif; ?>
@@ -131,4 +183,3 @@ $result = $stmt->get_result();
 
 </body>
 </html>
-
